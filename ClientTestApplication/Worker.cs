@@ -14,8 +14,8 @@ namespace ConsoleApplication3
         int port;
         public bool isRunning = true;
         bool createStream = true;
-        static TcpClient tcpClient = new TcpClient();
-        static NetworkStream networkStream;   
+        private TcpClient tcpClient = new TcpClient();
+        private NetworkStream networkStream;   
         private IPAddress[] ipAddress;
 
         public Worker(string ip, int port)
@@ -28,9 +28,12 @@ namespace ConsoleApplication3
         public void DoWork()
         {
             try
-            {
-                Console.WriteLine(" >> Start client");
-                tcpClient.Connect(ip, port);
+            {               
+                while (!tcpClient.Connected)
+                {
+                    Console.WriteLine(" >> Start client");
+                    tcpClient.Connect(ip, port);
+                }
                 Console.WriteLine(" >> Connected");
                 networkStream = tcpClient.GetStream();
             }
