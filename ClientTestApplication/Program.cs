@@ -25,29 +25,44 @@ namespace ConsoleApplication3
         static int port_server_receive = 4002;
         static string ip = "127.0.0.1";
         static Byte[] sendBytes = new Byte[2];
+        static int DELAY_TIME_THREAD = 10; // ms
+        static Stopwatch timer;
+        static long MAX_ELAPSED_TIME = 3000;
 
+        static Byte[] recBytes = new Byte[8];
 
         static void Main(string[] args)
         {
-            if (firstStart)
-            {
-                initSocket(ip, port_server_send, port_server_receive);
-                firstStart = false;
-            }
+            initSocket(ip, port_server_send, port_server_receive);
+
+            timer = new Stopwatch();
+            if (!timer.IsRunning) timer.Start();
 
             while (true)
             {
                 try
                 {
-                    Byte[] recBytes = receiveData();
-
-                    // TODO
-                    // Change the tasknumber after a specific time to simulate that task is completed
-                    // The client needs to stop sending data after the server side set the tasknumber to zero (hand shake)
-
-
-                    sendData(recBytes);
-                    Thread.Sleep(10);
+                    recBytes = receiveData();
+                    // ----------------
+                    // FOR TESTING
+                    // ----------------
+                    if ((timer.ElapsedMilliseconds >= MAX_ELAPSED_TIME) & (recBytes[0] != 0))
+                    {
+                        // Reset task number to 0 after completing task
+                        // To simulate this behaviour this is done after a specific amount of time
+                        sendBytes[0] = 0x00;
+                        timer.Reset();
+                    }
+                    else if (recBytes[0] != 0)
+                    {
+                        // Send data back to server only when the task number is not 0
+                        sendData(recBytes);
+                        timer.Reset();
+                    }
+                    // ----------------
+                    // ----------------
+                    
+                    Thread.Sleep(DELAY_TIME_THREAD);
                 }
                 catch (NullReferenceException e)
                 {
@@ -56,6 +71,8 @@ namespace ConsoleApplication3
                 }
 
             }
+
+            if (timer.IsRunning) timer.Stop();
         }
 
         static private void initSocket(String ip, int port_sever_send, int port_sever_receive)
@@ -79,16 +96,16 @@ namespace ConsoleApplication3
                 if (tcpClient != null)
                 {
                     networkStream_server_send.Read(receiveBytes, 0, 8);
-                    Console.WriteLine(" >> " + receiveBytes.Length + " bytes received.");
+                    //Console.WriteLine(" >> " + receiveBytes.Length + " bytes received.");
                     short tasknumber = receiveBytes[0];
                     short motorId = receiveBytes[1];
                     short motorVel = BitConverter.ToInt16(receiveBytes, 2);
                     short motorPos = BitConverter.ToInt16(receiveBytes, 4);
                     //string returndata = System.Text.Encoding.ASCII.GetString(receiveBytes);
-                    Console.WriteLine("tasknumber: " + tasknumber);
-                    Console.WriteLine("motorId: " + motorId);
-                    Console.WriteLine("motorVel: " + motorVel);
-                    Console.WriteLine("motorPos: " + motorPos);
+                    Console.WriteLine("tasknumber (receive): " + tasknumber);
+                    //Console.WriteLine("motorId: " + motorId);
+                    //Console.WriteLine("motorVel: " + motorVel);
+                    //Console.WriteLine("motorPos: " + motorPos);
 
                 }
 
@@ -106,11 +123,9 @@ namespace ConsoleApplication3
                 {
                     //string stringToSend = "TestMessage;1:1:3;";
                     //Byte[] sendBytes = Encoding.ASCII.GetBytes(stringToSend);
-
-                    sendBytes[0] = recBytes[0];
-                    sendBytes[1] = recBytes[1];
                     networkStream_server_receive.Write(sendBytes, 0, sendBytes.Length);
                     networkStream_server_receive.Flush();
+                    Console.WriteLine("tasknumber (send): " + sendBytes[0]);
                 }
 
             }
