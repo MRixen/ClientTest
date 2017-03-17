@@ -24,7 +24,7 @@ namespace ConsoleApplication3
         static int port_server_send = 4001;
         static int port_server_receive = 4002;
         static string ip = "127.0.0.1";
-        static Byte[] sendBytes = new Byte[2];
+        static Byte[] sendBytes = new Byte[4];
         static int DELAY_TIME_THREAD = 10; // ms
         static Stopwatch timer;
         static long MAX_ELAPSED_TIME = 3000;
@@ -36,7 +36,6 @@ namespace ConsoleApplication3
             initSocket(ip, port_server_send, port_server_receive);
 
             timer = new Stopwatch();
-            if (!timer.IsRunning) timer.Start();
 
             while (true)
             {
@@ -46,19 +45,31 @@ namespace ConsoleApplication3
                     // ----------------
                     // FOR TESTING
                     // ----------------
-                    if ((timer.ElapsedMilliseconds >= MAX_ELAPSED_TIME) & (recBytes[0] != 0))
+                    //if ((timer.ElapsedMilliseconds >= MAX_ELAPSED_TIME) & (recBytes[0] != 0))
+                    //{
+                    //    // Reset task number to 0 after completing task
+                    //    // To simulate this behaviour this is done after a specific amount of time
+                    //    sendBytes[0] = 0x00;
+                    //    sendBytes[1] = recBytes[1];
+                    //    sendData(sendBytes);
+                    //}
+                    if (recBytes[0] == 2) // Save ref pos
                     {
-                        // Reset task number to 0 after completing task
-                        // To simulate this behaviour this is done after a specific amount of time
-                        sendBytes[0] = 0x00;
-                        timer.Reset();
-                    }
-                    else if (recBytes[0] != 0)
-                    {
+                        //if (!timer.IsRunning) timer.Start();
+
+                        // Send back motor angle when task 2 comes in
+                        sendBytes[0] = recBytes[0]; // Task number
+                        sendBytes[1] = recBytes[1]; // Motor id
+                        byte[] motorAngle = BitConverter.GetBytes(360);
+                        sendBytes[2] = motorAngle[0]; // Motor angle
+                        sendBytes[3] = motorAngle[1]; // Motor angle
                         // Send data back to server only when the task number is not 0
-                        sendData(recBytes);
-                        timer.Reset();
+                        sendData(sendBytes);
                     }
+                    //else if ((timer.ElapsedMilliseconds >= MAX_ELAPSED_TIME))
+                    //{
+                    //    timer.Reset();
+                    //}
                     // ----------------
                     // ----------------
                     
@@ -113,7 +124,7 @@ namespace ConsoleApplication3
             return receiveBytes;
         }
 
-        static private void sendData(Byte[] recBytes)
+        static private void sendData(Byte[] data)
         {
             networkStream_server_receive = worker_server_receive.getNetworkStream();
             if (networkStream_server_receive != null)
@@ -123,9 +134,8 @@ namespace ConsoleApplication3
                 {
                     //string stringToSend = "TestMessage;1:1:3;";
                     //Byte[] sendBytes = Encoding.ASCII.GetBytes(stringToSend);
-                    networkStream_server_receive.Write(sendBytes, 0, sendBytes.Length);
+                    networkStream_server_receive.Write(data, 0, data.Length);
                     networkStream_server_receive.Flush();
-                    Console.WriteLine("tasknumber (send): " + sendBytes[0]);
                 }
 
             }
